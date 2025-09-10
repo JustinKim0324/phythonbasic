@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>파이썬 기초 강의</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #2d2d2d;
+            color: #f0f0f0;
+        }
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .lesson-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+        }
+        .lesson-item {
+            display: block;
+            background-color: #3e3e3e;
+            border: 1px solid #555;
+            padding: 20px;
+            text-align: center;
+            border-radius: 10px;
+            text-decoration: none;
+            color: #f0f0f0;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        .lesson-item:hover {
+            background-color: #555;
+            transform: translateY(-5px);
+        }
+        .lesson-item h3 {
+            margin: 0;
+            font-size: 1.2em;
+        }
+        .lesson-item p {
+            margin: 5px 0 0;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header class="header">
+        <h1>파이썬 기초 강의</h1>
+        <p>아래 섬네일을 클릭하여 원하는 강의를 선택하세요.</p>
+    </header>
+
+    <div class="lesson-grid">
+        <a href="lesson.html?file=파이썬 기초 1강.md" class="lesson-item">
+            <h3>1강</h3>
+            <p>출력과 입력</p>
+        </a>
+        <a href="lesson.html?file=파이썬 기초 2강.md" class="lesson-item">
+            <h3>2강</h3>
+            <p>연산자와 조건문</p>
+        </a>
+        <a href="lesson.html?file=lesson.html?file=파이썬 기초 3강.md" class="lesson-item">
+            <h3>3강</h3>
+            <p>반복문</p>
+        </a>
+        <a href="lesson.html?file=파이썬 기초 4강.md" class="lesson-item">
+            <h3>4강</h3>
+            <p>리스트</p>
+        </a>
+        <a href="lesson.html?file=파이썬 기초 5강.md" class="lesson-item">
+            <h3>5강</h3>
+            <p>라이브러리</p>
+        </a>
+    </div>
+</div>
+
+</body>
+</html>
