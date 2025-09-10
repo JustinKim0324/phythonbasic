@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>강의 내용</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.8.0/styles/github-dark.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.8.0/lib/common.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -81,6 +83,7 @@
                 .then(markdownText => {
                     // marked.js를 사용하여 마크다운을 HTML로 변환
                     contentDiv.innerHTML = marked.parse(markdownText);
+                    hljs.highlightAll();
                 })
                 .catch(error => {
                     contentDiv.innerHTML = `<p style="color:red;">오류: ${error.message}</p>`;
