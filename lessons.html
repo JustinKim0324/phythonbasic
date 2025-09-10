@@ -3,22 +3,31 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <!-- GitHub Pages 프로젝트 페이지 기준 경로 고정 -->
   <base href="/phythonbasic/">
   <title>강의 보기</title>
+
+  <!-- 기본 스타일 -->
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.6; margin: 24px; color:#222; }
     .container { max-width: 860px; margin: 0 auto; }
     .topbar { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
     .topbar a { text-decoration:none; color:#2563eb; }
     .status { font-size:14px; color:#666; }
-    pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-    pre { background:#f6f8fa; padding:12px; overflow:auto; border-radius:8px; }
     img { max-width:100%; height:auto; }
     blockquote { border-left:4px solid #e5e7eb; margin: 0; padding: 0 12px; color:#555; }
+
+    /* 코드 블록 */
+    pre { overflow:auto; border-radius:10px; padding: 14px; }
+    code, pre code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.95rem; }
+    :not(pre) > code { background:#f6f8fa; padding:2px 6px; border-radius:6px; }
   </style>
-  <!-- Markdown 렌더러 (CDN) -->
+
+  <!-- Markdown 렌더러 -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <!-- highlight.js (문법 하이라이트) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/common.min.js"></script>
 </head>
 <body>
   <div class="container">
@@ -26,49 +35,55 @@
       <a href="index.html">← 목록으로</a>
       <span class="status" id="status">강의 내용을 불러오는 중…</span>
     </div>
-    <article id="content"> </article>
+    <article id="content"></article>
   </div>
 
   <script>
     (function () {
-      const params = new URLSearchParams(location.search);
-      // 기본 파일명은 필요에 맞게 바꾸세요.
-      const rawFile = params.get('file') || 'lessons1.md';
+      const params   = new URLSearchParams(location.search);
+      const rawFile  = params.get('file') || 'lessons1.md';
+      const isSafe   = /^[a-zA-Z0-9._-]+\.md$/.test(rawFile);
+      const file     = isSafe ? rawFile : 'lessons1.md';
 
-      // 보안 및 오타 방지: 단순한 파일명(.md)만 허용
-      const isSafe = /^[a-zA-Z0-9._-]+\.md$/.test(rawFile);
-      const file = isSafe ? rawFile : 'lessons1.md';
-
-      const statusEl = document.getElementById('status');
+      const statusEl  = document.getElementById('status');
       const contentEl = document.getElementById('content');
 
-      // 상대경로로 fetch → /phythonbasic/<file> 에서 가져옴
+      // marked 옵션에 highlight.js 연결
+      marked.setOptions({
+        highlight(code, lang) {
+          try {
+            if (lang && hljs.getLanguage(lang)) {
+              return hljs.highlight(code, { language: lang }).value;
+            }
+            return hljs.highlightAuto(code).value;
+          } catch (e) {
+            return code;
+          }
+        },
+        gfm: true,
+        breaks: false
+      });
+
       fetch(file, { cache: 'no-store' })
         .then(res => {
           if (!res.ok) throw new Error(`(${res.status}) ${res.statusText}`);
           return res.text();
         })
         .then(md => {
-          // marked 기본 옵션(필요 시 확장)
-          if (window.marked) {
-            // GitHub 스타일 코드블록 언어 지정이 없어도 렌더는 됩니다.
-            contentEl.innerHTML = marked.parse(md);
-          } else {
-            // 혹시 CDN이 실패했을 때 대비
-            contentEl.textContent = md;
-          }
+          contentEl.innerHTML = marked.parse(md);
           statusEl.textContent = file + ' 로딩 완료';
+
+          // 코드 블록 다시 확인 (혹시 누락된 경우 대비)
+          document.querySelectorAll('pre code').forEach(block => {
+            hljs.highlightElement(block);
+          });
         })
         .catch(err => {
           statusEl.textContent = '로딩 실패';
           contentEl.innerHTML = `
             <p>파일을 불러오지 못했습니다: <code>${file}</code></p>
             <pre>${String(err)}</pre>
-            <p>확인하세요:</p>
-            <ul>
-              <li><code>${file}</code>이 저장소의 <strong>같은 폴더</strong>에 있는지</li>
-              <li>파일명(대/소문자 포함)이 링크와 정확히 일치하는지</li>
-            </ul>`;
+          `;
         });
     })();
   </script>
