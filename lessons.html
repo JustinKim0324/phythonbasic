@@ -6,7 +6,6 @@
   <base href="/phythonbasic/">
   <title>강의 보기</title>
 
-  <!-- 기본 스타일 -->
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.6; margin: 24px; color:#222; }
     .container { max-width: 860px; margin: 0 auto; }
@@ -16,18 +15,20 @@
     img { max-width:100%; height:auto; }
     blockquote { border-left:4px solid #e5e7eb; margin: 0; padding: 0 12px; color:#555; }
 
-    /* 코드 블록 */
+    /* 코드 블록 기본 스타일 */
     pre { overflow:auto; border-radius:10px; padding: 14px; }
     code, pre code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.95rem; }
     :not(pre) > code { background:#f6f8fa; padding:2px 6px; border-radius:6px; }
   </style>
 
-  <!-- Markdown 렌더러 -->
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
-  <!-- highlight.js (문법 하이라이트) -->
+  <!-- highlight.js (스타일 + 스크립트) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
   <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/common.min.js"></script>
+
+  <!-- marked UMD -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/lib/marked.umd.min.js"></script>
+  <!-- marked-highlight UMD (marked 공식 확장) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked-highlight/lib/index.umd.js"></script>
 </head>
 <body>
   <div class="container">
@@ -48,21 +49,26 @@
       const statusEl  = document.getElementById('status');
       const contentEl = document.getElementById('content');
 
-      // marked 옵션에 highlight.js 연결
-      marked.setOptions({
-        highlight(code, lang) {
-          try {
-            if (lang && hljs.getLanguage(lang)) {
-              return hljs.highlight(code, { language: lang }).value;
-            }
-            return hljs.highlightAuto(code).value;
-          } catch (e) {
-            return code;
+      // marked + marked-highlight로 파서 생성 (공식 가이드)
+      // globalThis.marked, globalThis.markedHighlight, globalThis.hljs 사용
+      const { Marked } = globalThis.marked;
+      const { markedHighlight } = globalThis.markedHighlight;
+
+      const parser = new Marked(
+        markedHighlight({
+          // 언어 미지정인 경우에도 테마가 적용되도록 hljs 클래스 부여
+          emptyLangClass: 'hljs',
+          // 코드 태그에 붙는 prefix (테마 CSS가 인식)
+          langPrefix: 'hljs language-',
+          highlight(code, lang) {
+            const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+            return hljs.highlight(code, { language }).value;
           }
-        },
-        gfm: true,
-        breaks: false
-      });
+        })
+      );
+
+      // GFM 등 옵션은 필요 시 추가
+      parser.setOptions({ gfm: true });
 
       fetch(file, { cache: 'no-store' })
         .then(res => {
@@ -70,13 +76,13 @@
           return res.text();
         })
         .then(md => {
-          contentEl.innerHTML = marked.parse(md);
+          // fenced code block 예: ```python ... ```
+          const html = parser.parse(md);
+          contentEl.innerHTML = html;
           statusEl.textContent = file + ' 로딩 완료';
 
-          // 코드 블록 다시 확인 (혹시 누락된 경우 대비)
-          document.querySelectorAll('pre code').forEach(block => {
-            hljs.highlightElement(block);
-          });
+          // 혹시 동적으로 추가되는 코드가 있다면 대비
+          document.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
         })
         .catch(err => {
           statusEl.textContent = '로딩 실패';
