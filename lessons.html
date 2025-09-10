@@ -89,8 +89,8 @@
                 };
                 xhr.send();
             } else {
-                // 서버 환경에서는 fetch 사용
-                fetch(fileName)
+                // 서버 환경에서는 fetch 사용 (경로 수정)
+                fetch(`phythonbasic-main/${fileName}`)
                     .then(response => {
                         if (!response.ok) {
                             throw new Error(`파일을 불러오는 데 실패했습니다: ${fileName}`);
