@@ -14,21 +14,22 @@
     .status { font-size:14px; color:#666; }
     img { max-width:100%; height:auto; }
     blockquote { border-left:4px solid #e5e7eb; margin: 0; padding: 0 12px; color:#555; }
-
-    /* 코드 블록 기본 스타일 */
     pre { overflow:auto; border-radius:10px; padding: 14px; }
     code, pre code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.95rem; }
     :not(pre) > code { background:#f6f8fa; padding:2px 6px; border-radius:6px; }
+
+    /* 에러 박스 */
+    .error { background:#fff1f2; color:#b91c1c; border:1px solid #fecaca; padding:12px; border-radius:8px; margin-top:12px; white-space:pre-wrap; }
   </style>
 
-  <!-- highlight.js (스타일 + 스크립트) -->
+  <!-- highlight.js (테마 + 공통 번들) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/common.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/common.min.js"></script>
 
-  <!-- marked UMD -->
-  <script src="https://cdn.jsdelivr.net/npm/marked/lib/marked.umd.min.js"></script>
-  <!-- marked-highlight UMD (marked 공식 확장) -->
-  <script src="https://cdn.jsdelivr.net/npm/marked-highlight/lib/index.umd.js"></script>
+  <!-- marked UMD (버전 고정) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/marked@12.0.2/lib/marked.umd.min.js"></script>
+  <!-- marked-highlight UMD (버전 고정) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/marked-highlight@2.1.3/lib/index.umd.js"></script>
 </head>
 <body>
   <div class="container">
@@ -37,61 +38,71 @@
       <span class="status" id="status">강의 내용을 불러오는 중…</span>
     </div>
     <article id="content"></article>
+    <div id="error" class="error" style="display:none;"></div>
   </div>
 
   <script>
-    (function () {
-      const params   = new URLSearchParams(location.search);
-      const rawFile  = params.get('file') || 'lessons1.md';
-      const isSafe   = /^[a-zA-Z0-9._-]+\.md$/.test(rawFile);
-      const file     = isSafe ? rawFile : 'lessons1.md';
+    // 화면에 에러 표시
+    function showError(e) {
+      const box = document.getElementById('error');
+      box.style.display = 'block';
+      box.textContent = String(e && e.stack ? e.stack : e);
+    }
 
-      const statusEl  = document.getElementById('status');
-      const contentEl = document.getElementById('content');
+    window.addEventListener('load', () => {
+      (async function () {
+        const statusEl  = document.getElementById('status');
+        const contentEl = document.getElementById('content');
 
-      // marked + marked-highlight로 파서 생성 (공식 가이드)
-      // globalThis.marked, globalThis.markedHighlight, globalThis.hljs 사용
-      const { Marked } = globalThis.marked;
-      const { markedHighlight } = globalThis.markedHighlight;
+        try {
+          const params   = new URLSearchParams(location.search);
+          const rawFile  = params.get('file') || 'lessons1.md';
+          const isSafe   = /^[a-zA-Z0-9._-]+\.md$/.test(rawFile);
+          const file     = isSafe ? rawFile : 'lessons1.md';
 
-      const parser = new Marked(
-        markedHighlight({
-          // 언어 미지정인 경우에도 테마가 적용되도록 hljs 클래스 부여
-          emptyLangClass: 'hljs',
-          // 코드 태그에 붙는 prefix (테마 CSS가 인식)
-          langPrefix: 'hljs language-',
-          highlight(code, lang) {
-            const language = hljs.getLanguage(lang) ? lang : 'plaintext';
-            return hljs.highlight(code, { language }).value;
-          }
-        })
-      );
+          // 전역 체크 (CDN 로딩 실패 원인 파악)
+          const hasMarked = !!(globalThis.marked && globalThis.marked.Marked);
+          const hasHL     = !!(globalThis.hljs);
+          const hasMH     = !!(globalThis.markedHighlight && globalThis.markedHighlight.markedHighlight);
 
-      // GFM 등 옵션은 필요 시 추가
-      parser.setOptions({ gfm: true });
+          if (!hasMarked) throw new Error('marked UMD가 로드되지 않았습니다.');
+          if (!hasHL)     throw new Error('highlight.js가 로드되지 않았습니다.');
+          if (!hasMH)     throw new Error('marked-highlight가 로드되지 않았습니다.');
 
-      fetch(file, { cache: 'no-store' })
-        .then(res => {
-          if (!res.ok) throw new Error(`(${res.status}) ${res.statusText}`);
-          return res.text();
-        })
-        .then(md => {
-          // fenced code block 예: ```python ... ```
+          const { Marked } = globalThis.marked;
+          const { markedHighlight } = globalThis.markedHighlight;
+
+          // marked + marked-highlight로 파서 생성
+          const parser = new Marked(
+            markedHighlight({
+              emptyLangClass: 'hljs',
+              langPrefix: 'hljs language-',
+              highlight(code, lang) {
+                const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                return hljs.highlight(code, { language }).value;
+              }
+            })
+          );
+          parser.setOptions({ gfm: true });
+
+          // md 불러오기 (상대경로 → /phythonbasic/<file>)
+          const res = await fetch(file, { cache: 'no-store' });
+          if (!res.ok) throw new Error(`MD 파일 로드 실패: ${file} (${res.status} ${res.statusText})`);
+          const md = await res.text();
+
+          // 파싱 & 렌더
           const html = parser.parse(md);
           contentEl.innerHTML = html;
           statusEl.textContent = file + ' 로딩 완료';
 
-          // 혹시 동적으로 추가되는 코드가 있다면 대비
+          // 혹시 동적 추가 대비
           document.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
-        })
-        .catch(err => {
+        } catch (e) {
           statusEl.textContent = '로딩 실패';
-          contentEl.innerHTML = `
-            <p>파일을 불러오지 못했습니다: <code>${file}</code></p>
-            <pre>${String(err)}</pre>
-          `;
-        });
-    })();
+          showError(e);
+        }
+      })();
+    });
   </script>
 </body>
 </html>
